@@ -4,7 +4,11 @@
 
 { config, pkgs, ... }:
 
-let localConfig = import ./local.nix; in
+let
+  localConfig = import ./local.nix;
+  pysunspec = with pkgs; callPackage /root/praisethesun/nixpkgs/pysunspec.nix {inherit python37 fetchFromGitHub;};
+  prometheus-sunspec-exporter = with pkgs; callPackage /root/praisethesun/nixpkgs/sunspec-exporter.nix {inherit python37 pysunspec;};
+in
 {
   imports =
     [ # Include the results of the hardware scan.
@@ -57,7 +61,7 @@ let localConfig = import ./local.nix; in
     screen wget ncdu iotop htop strace ethtool
     manpages pv lm_sensors linuxPackages.perf iftop nethogs tcpdump
     pciutils ntp iproute file sshfs ripgrep psmisc unzip git
-    mlocate
+    prometheus-sunspec-exporter
     (pkgs.vim_configurable.customize {
       name="vim";
       vimrcConfig.vam.knownPlugins = pkgs.vimPlugins;
@@ -116,6 +120,19 @@ let localConfig = import ./local.nix; in
 
   # Enable CUPS to print documents.
   # services.printing.enable = true;
+  systemd.services."prometheus-sunspec-exporter" = ({
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network.target" ];
+    serviceConfig.Restart = "always";
+    serviceConfig.PrivateTmp = true;
+    serviceConfig.WorkingDirectory = /tmp;
+    serviceConfig.DynamicUser = true;
+    serviceConfig.ExecStart = ''
+      ${prometheus-sunspec-exporter}/bin/sunspec_exporter \
+        192.168.1.15
+    '';
+  });
+
 
   services.prometheus = {
     enable = true;
@@ -168,6 +185,10 @@ let localConfig = import ./local.nix; in
     };
   };
   services.nginx = {
+    enable = true;
+  };
+
+  services.locate = {
     enable = true;
   };
 
