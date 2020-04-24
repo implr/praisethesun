@@ -117,6 +117,24 @@ in
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
+  services.openvpn.servers = {
+    remote = { config = ''
+      client
+      remote ${localConfig.vpnRemote}
+      dev tun
+      proto udp
+      port 11223
+      keepalive 10 60
+      persist-tun
+      persist-key
+      compress lz4
+      cipher AES-256-CBC
+      ca /etc/openvpn/ca.crt
+      cert /etc/openvpn/tls.crt
+      key /etc/openvpn/tls.key
+    '';};
+  };
+
 
   # Enable CUPS to print documents.
   # services.printing.enable = true;
